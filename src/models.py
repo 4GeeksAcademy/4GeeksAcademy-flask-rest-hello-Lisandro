@@ -12,6 +12,7 @@ class User(db.Model):
         return {
             "id": self.id,
             "email": self.email,
+            "favorites": self.favorites
             # do not serialize the password, its a security breach
         }
 class Person (db.Model):
@@ -30,7 +31,7 @@ class Person (db.Model):
             "id": self.id,
             "nombre_personaje": self.nombre_personaje,
             "edad": self.edad,
-            "genero": self.Genero,
+            "genero": self.genero,
             "color_ojos": self.color_ojos,
             "color_cabello": self.color_cabello,
             "altura": self.altura
@@ -90,4 +91,16 @@ class Favorites (db.Model):
             "id_user": self.id_user,
             # do not serialize the password, its a security breach
         }
-    
+class Login (db.Model):
+    __tablename__ = 'login'
+    id = db.Column(db.Integer, primary_key=True)
+    id_email = db.Column(db.Integer, db.ForeignKey('email.id'))
+    id_password = db.Column(db.Integer, db.ForeignKey('password.id'))
+    def __repr__(self):
+        return '<login %r>' % self.id
+    def serialize(self):
+        return {
+            "id": self.id,
+            "id_email": self.id_email,
+            "id_password":self.id_password
+        }

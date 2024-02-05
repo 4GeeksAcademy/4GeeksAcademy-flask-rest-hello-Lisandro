@@ -9,8 +9,11 @@ from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
 from models import db, User , Person, Planets, Vehicles, Favorites
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, JWTManager
 #from models import Person
 app = Flask(__name__)
+app.config["JWT_SECRET_KEY"] = "super-secret"  # Change this!
+jwt = JWTManager(app)
 app.url_map.strict_slashes = False
 db_url = os.getenv("DATABASE_URL")
 if db_url is not None:
@@ -77,12 +80,17 @@ def get_all_vehicles():
     return jsonify(response_body), 200
 #metodo GET para favoritos
 @app.route('/favorites', methods=['GET'])
+@jwt_required()
 def get_all_favorites():
-    favorites_query = Favorites.query.all()
-    favorites_data = list(map(lambda item: item.serialize(), favorites_query))
+    current_user = get_jwt_identity()
+    # favorites_query = Favorites.query.all()
+    # favorites_data = list(map(lambda item: item.serialize(), favorites_query))
+    user_favorites_query = User.query.filter_by(email = current_user)
+    user_favorites_data = list(map(lambda item: item.serialize(), user_favorites_query))
+    print(user_favorites_data)
     response_body = {
         "msg": "ok",
-        "favorites": favorites_data
+        "data":user_favorites_data
 }
     return jsonify(response_body), 200
 #para obtener datos de UNA sola PERSONA
@@ -144,7 +152,23 @@ def create_one_planet():
         # "people": people_query.serialize
     }
     return jsonify(response_body), 200
-# this only runs if `$ python src/app.py` is executed
+@app.route("/login", methods=["POST"])
+def login():
+    # body = request.json
+    email = request.json.get("email", None)
+    password = request.json.get("password", None)
+    user_query = User.query.filter_by(email=email).first()
+    print(user_query.email)
+    if email != user_query.email or password != user_query.password:
+        return jsonify({"msg": "Bad username or password"}), 401
+    access_token = create_access_token(identity=email)
+    return jsonify(access_token=access_token)
+@app.route("/protected", methods=["GET"])
+@jwt_required()
+def protected():
+    # Access the identity of the current user with get_jwt_identity
+    current_user = get_jwt_identity()
+    return jsonify(logged_in_as=current_user), 200
 if __name__ == '__main__':
     PORT = int(os.environ.get('PORT', 3000))
     app.run(host='0.0.0.0', port=PORT, debug=False)
